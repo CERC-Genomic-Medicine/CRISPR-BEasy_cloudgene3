@@ -23,9 +23,16 @@ import io.micronaut.security.event.LoginSuccessfulEvent;
 import io.micronaut.security.token.bearer.AccessRefreshTokenLoginHandler;
 import jakarta.inject.Inject;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import java.util.Collections;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 @Controller
 public class LoginController {
+
+	private static final Logger log = LoggerFactory.getLogger(LoginController.class);
 
 	@Inject
 	protected AccessRefreshTokenLoginHandler loginHandler;
@@ -41,7 +48,14 @@ public class LoginController {
 	@SingleResult
 	public Publisher<MutableHttpResponse<?>> login(@Valid @Body UsernamePasswordCredentials usernamePasswordCredentials,
 			HttpRequest<?> request) {
-
+    	String source = request.getParameters().get("source");
+    	String username = usernamePasswordCredentials.getUsername();
+    	if ((source == "UI") && (username == "Public")){
+			return Mono.just(HttpResponse
+    					.status(HttpStatus.UNAUTHORIZED) // Set HTTP status code
+    					.body(Collections.singletonMap("message", "This username is always invalid"))); // Include the error message
+    	}
+    	log.info("" + username );
 		return Flux.from(authenticator.authenticate(request, usernamePasswordCredentials))
 				.map(authenticationResponse -> {
 					if (authenticationResponse.isAuthenticated()

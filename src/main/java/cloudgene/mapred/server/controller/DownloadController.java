@@ -147,7 +147,7 @@ public class DownloadController {
 	}
 
 	@Get("/api/v2/jobs/{jobId}/chunks/{filename}")
-	@Secured(SecurityRule.IS_AUTHENTICATED)
+	@Secured(SecurityRule.IS_ANONYMOUS)
 	public File downloadChunk(Authentication authentication, String jobId, String filename) {
 
 		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);

@@ -19,14 +19,14 @@
              {{#apps}}
               <a class="dropdown-item" href="#!run/{{id}}">{{name}} <small class="text-muted">{{version}}</small></a>
              {{/apps}}
-             {{^is(experimentalApps.length, 0)}}
+             {{#is(user.admin, true)}}
                 <div class="dropdown-divider"></div>
                 <h6 class="dropdown-header">Experimental</h6>
                 {{#experimentalApps}}
                   <a class="dropdown-item " href="#!run/{{id}}">{{name}}</a>
                 {{/experimentalApps}}
              {{/is}}
-             {{^is(deprecatedApps.length, 0)}}
+             {{#if(user)}}
                 <div class="dropdown-divider"></div>
                 <h6 class="dropdown-header">Deprecated</h6>
                 {{#deprecatedApps}}
@@ -83,10 +83,17 @@
          </li>
        {{else}}
          <li class="nav-item">
-           <a class="nav-link" href="#!pages/register">Sign up</a>
+
+        <a class="nav-link" href="#!pages/register">
+            <span>Sign up</span>
+            <span>(optional)</span>
+        </a>
          </li>
          <li class="nav-item">
-           <a class="nav-link" href="#!pages/login">Login</a>
+           <a class="nav-link" href="#!pages/login">
+            <span>Login</span>
+            <span>(optional)</span>
+            </a>
          </li>
        {{/if}}
      </ul>

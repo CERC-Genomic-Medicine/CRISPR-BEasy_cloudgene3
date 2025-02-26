@@ -38,7 +38,9 @@ public class CloudgeneJob extends AbstractJob {
 	public CloudgeneJob(User user, String id, WdlApp app, Map<String, String> params) {
 		this.app = app;
 		setId(id);
+		log.warn("set_id_cloudgenejob");
 		setUser(user);
+		log.warn("set_user");
 		workingDirectory = app.getPath();
 
 		// init parameters
@@ -53,7 +55,7 @@ public class CloudgeneJob extends AbstractJob {
 
 			inputParams.add(newInput);
 		}
-
+		log.warn("outputParams_cloudgene_job");
 		outputParams = new Vector<CloudgeneParameterOutput>();
 		for (WdlParameterOutput output : app.getWorkflow().getOutputs()) {
 			CloudgeneParameterOutput newOutput = new CloudgeneParameterOutput(output);
@@ -62,8 +64,10 @@ public class CloudgeneJob extends AbstractJob {
 			outputParams.add(newOutput);
 			outputParamsIndex.put(output.getId(), newOutput);
 		}
+		log.warn("initLogOutput");
 
 		initLogOutput();
+		log.warn("finish clougene+job");
 
 	}
 

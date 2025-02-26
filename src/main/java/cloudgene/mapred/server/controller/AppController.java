@@ -3,7 +3,6 @@ package cloudgene.mapred.server.controller;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
 import cloudgene.mapred.apps.Application;
 import cloudgene.mapred.apps.ApplicationRepository;
 import cloudgene.mapred.core.Template;
@@ -25,9 +24,12 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 public class AppController {
+
 
 	@Inject
 	protected cloudgene.mapred.server.Application application;
@@ -40,20 +42,14 @@ public class AppController {
 
 	@Get("/api/v2/server/apps/{appId}")
 	@Secured(SecurityRule.IS_ANONYMOUS)
-	public WdlAppResponse getApp(@Nullable Authentication authentication, String appId) {
-
-		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
-		Application app = applicationService.getByIdAndUser(user, appId);
-
+	public WdlAppResponse getApp(String appId) {
+		Application app = applicationService.getById(appId);
 		applicationService.checkRequirements(app);
 		ApplicationRepository repository = applicationService.getRepository();
-		List<Application> apps = repository.getAllByUser(user, ApplicationRepository.APPS_AND_DATASETS);
-
+		List<Application> apps = repository.getAllApps(ApplicationRepository.APPS_AND_DATASETS);
 		WdlAppResponse response = WdlAppResponse.build(app.getWdlApp(), apps);
-
 		response.setS3Workspace(application.getSettings().getExternalWorkspaceType().equalsIgnoreCase("S3")
 				&& application.getSettings().getExternalWorkspaceLocation().isEmpty());
-
 		String footer = this.application.getTemplate(Template.FOOTER_SUBMIT_JOB);
 		if (footer != null && !footer.trim().isEmpty()) {
 			response.setFooter(footer);

@@ -140,7 +140,35 @@ public class ApplicationRepository {
 
 		for (Application application : getAll()) {
 
-            if (!hasAccess(user, application) || !isActivated(application)) {
+            if (!isActivated(application)) {
+                continue;
+            }
+
+            WdlApp wdlApp = application.getWdlApp();
+
+            if (filter == APPS_AND_DATASETS) {
+                listApps.add(application);
+            } else if (filter == APPS && wdlApp.getWorkflow() != null) {
+				listApps.add(application);
+
+            } else if (filter == DATASETS && wdlApp.getWorkflow() != null) {
+				listApps.add(application);
+            }
+
+        }
+
+		Collections.sort(listApps);
+		return listApps;
+
+	}
+
+		public List<Application> getAllApps(int filter) {
+
+		List<Application> listApps = new Vector<Application>();
+
+		for (Application application : getAll()) {
+
+            if (!isActivated(application)) {
                 continue;
             }
 

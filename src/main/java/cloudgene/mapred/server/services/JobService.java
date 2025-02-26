@@ -72,9 +72,10 @@ public class JobService {
 		}
 
 		AbstractJob job = getById(id);
+		log.warn("" + (!job.getUser().getUsername().equals("public")));
 
 		// admin has access to all jobs. Other users only to their own jobs.
-		if (!user.isAdmin() && job.getUser().getId() != user.getId()) {
+		if ((!user.isAdmin() && job.getUser() != null && job.getUser().getId() != user.getId()) && !job.getUser().getUsername().equals("public") ) {
 			throw new JsonHttpStatusException(HttpStatus.FORBIDDEN, "Access denied.");
 		}
 
@@ -83,21 +84,23 @@ public class JobService {
 
 	public AbstractJob submitJob(String appId, List<Parameter> form, User user, String userAgent) {
 
-		if (user == null) {
-			throw new JsonHttpStatusException(HttpStatus.UNAUTHORIZED, "Access denied.");
-		}
-
 		WorkflowEngine engine = this.application.getWorkflowEngine();
 		Settings settings = this.application.getSettings();
 
-		int maxPerUser = settings.getMaxRunningJobsPerUser();
-		if (!user.isAdmin() && engine.getJobsByUser(user).size() >= maxPerUser) {
-			throw new JsonHttpStatusException(HttpStatus.BAD_REQUEST,
-					"Only " + maxPerUser + " jobs per user can be executed simultaneously.");
-		}
+//		int maxPerUser = settings.getMaxRunningJobsPerUser();
+//		if (!user.isAdmin() && engine.getJobsByUser(user).size() >= maxPerUser) {
+//			throw new JsonHttpStatusException(HttpStatus.BAD_REQUEST,
+//					"Only " + maxPerUser + " jobs per user can be executed simultaneously.");
+//		}
 
 		ApplicationRepository repository = settings.getApplicationRepository();
-		cloudgene.mapred.apps.Application application = repository.getByIdAndUser(appId, user);
+		cloudgene.mapred.apps.Application application ;
+		if (user != null){
+			application = repository.getByIdAndUser(appId, user);
+		} else {
+			application = repository.getById(appId);			
+		}
+
 		if (application == null) {
 			throw new JsonHttpStatusException(HttpStatus.NOT_FOUND, "Application '" + appId + "' not found.");
 		}
@@ -106,7 +109,7 @@ public class JobService {
 			throw new JsonHttpStatusException(HttpStatus.NOT_FOUND,
 					"Application '" + appId + "' has no workflow section.");
 		}
-
+		log.warn("createID");
 		String id = createId();
 
 		Map<String, String> inputParams = null;
@@ -114,10 +117,12 @@ public class JobService {
 		IWorkspace workspace = workspaceFactory.getDefault();
 
 		try {
+			log.warn("workplacesetup1");
 
 			// setup workspace
 			workspace.setJob(id);
 			workspace.setup();
+			log.warn("workplacesetup2");
 
 			// parse input params
 			inputParams = JobParameterParser.parse(form, app, workspace);
@@ -138,15 +143,23 @@ public class JobService {
 
 		CloudgeneJob job = new CloudgeneJob(user, id, app, inputParams);
 		job.setId(id);
+		log.warn("jobID");
 		job.setName(name);
+		log.warn("name");
 		job.setLocalWorkspace(localWorkspace);
+		log.warn("localWorkspace");
 		job.setWorkspace(workspace);
+		log.warn("workspace");
 		job.setSettings(settings);
+		log.warn("settings");
 		job.setApplication(app.getName() + " " + app.getVersion());
+		log.warn("getVersion");
 		job.setApplicationId(appId);
+		log.warn("appId");
 		job.setUserAgent(userAgent);
-
+		log.warn("engine");
 		engine.submit(job);
+		log.warn("job jobservoce");
 
 		return job;
 

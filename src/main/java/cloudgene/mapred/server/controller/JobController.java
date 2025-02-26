@@ -63,8 +63,8 @@ public class JobController {
 	protected FormUtil formUtil;
 
 	@Get("/{id}")
-	@Secured(SecurityRule.IS_AUTHENTICATED)
-	public JobResponse get(Authentication authentication, String id) {
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	public JobResponse get(@Nullable Authentication authentication, String id) {
 
 		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
 
@@ -84,9 +84,8 @@ public class JobController {
 
 	@Post("/submit/{app}")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	@Secured(SecurityRule.IS_AUTHENTICATED)
-	public Publisher<HttpResponse<Object>> submit(Authentication authentication, HttpRequest<?> request, String app, @Body MultipartBody body) throws IOException {
-
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	public Publisher<HttpResponse<Object>> submit(@Nullable Authentication authentication, HttpRequest<?> request, String app, @Body MultipartBody body) throws IOException {
 		String userAgent = request.getHeaders().get(HttpHeaders.USER_AGENT);
 
 		long start = System.currentTimeMillis();
@@ -100,23 +99,38 @@ public class JobController {
 			public HttpResponse<Object> apply(List<Parameter> form) {
 
 				log.debug("Multi part parsed in " + (System.currentTimeMillis() - start) + " ms.");
+				User user;
 
-				User user = authenticationService.getUserByAuthentication(authentication,
-						AuthenticationType.ALL_TOKENS);
+				String csrfToken = request.getHeaders().get("X-CSRF-Token");
+				String authToken = request.getHeaders().get("X-Auth-Token");
 
+//				if (csrfToken == null && authToken == null) {
+				    user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
+				    log.debug("NOT Anonymous user set AAAAAA.");
+				    log.debug(csrfToken);
+//				} else {
+//				    user = authenticationService.getUserByAuthentication(null, AuthenticationType.ALL_TOKENS);
+//				    log.debug("Anonymous user set AAAAAA." + user.getUsername());
+//				    log.debug(user.getUsername());
+//				}
+				if (user == null) {
+    				log.warn("findByUsername returned null");
+				} else {
+				    log.warn("User found: " + user.getUsername());
+				}
 				try {
 
 					blockInMaintenanceMode(user);
+					log.warn("maintenance");
+
 
 					AbstractJob job = jobService.submitJob(app, form, user, userAgent);
+					log.warn("submit");
+
 
 					log.debug("Job " + job.getId() + " submitted in " + (System.currentTimeMillis() - start) + " ms.");
 
-					String message = String.format("Job: Created job ID %s for user %s (ID %s - email %s)", user.getId(),
-							user.getUsername(), user.getId(), user.getMail());
-					if (user.isAccessedByApi()) {
-						message += " (via API token)";
-					}
+					String message = String.format("Job: Created job ID for user Anonymous");
 					log.info(message);
 
 					message = "Your job was successfully added to the job queue.";
@@ -136,7 +150,7 @@ public class JobController {
 
 	@Get("/")
 	@Secured(SecurityRule.IS_AUTHENTICATED)
-	public PageResponse list(Authentication authentication, @QueryValue @Nullable Integer page) {
+	public PageResponse list( @Nullable Authentication authentication, @QueryValue @Nullable Integer page) {
 
 		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
 		blockInMaintenanceMode(user);
@@ -148,8 +162,8 @@ public class JobController {
 	}
 
 	@Delete("/{id}")
-	@Secured(SecurityRule.IS_AUTHENTICATED)
-	public JobResponse delete(Authentication authentication, String id) {
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	public JobResponse delete(@Nullable Authentication authentication, String id) {
 
 		User user = authenticationService.getUserByAuthentication(authentication);
 		blockInMaintenanceMode(user);
@@ -170,8 +184,8 @@ public class JobController {
 	}
 
 	@Get("/{id}/status")
-	@Secured(SecurityRule.IS_AUTHENTICATED)
-	public JobResponse status(Authentication authentication, String id) {
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	public JobResponse status(@Nullable Authentication authentication, String id) {
 
 		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
 		blockInMaintenanceMode(user);
@@ -183,8 +197,8 @@ public class JobController {
 	}
 
 	@Get("/{id}/cancel")
-	@Secured(SecurityRule.IS_AUTHENTICATED)
-	public JobResponse cancel(Authentication authentication, String id) {
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	public JobResponse cancel(@Nullable Authentication authentication, String id) {
 
 		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
 		blockInMaintenanceMode(user);
@@ -204,8 +218,8 @@ public class JobController {
 	}
 
 	@Get("/{id}/restart")
-	@Secured(SecurityRule.IS_AUTHENTICATED)
-	public MessageResponse restart(Authentication authentication, String id) {
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	public MessageResponse restart(@Nullable Authentication authentication, String id) {
 
 		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
 		blockInMaintenanceMode(user);
@@ -222,8 +236,8 @@ public class JobController {
 		return MessageResponse.success(MESSAGE_JOB_RESTARTED);
 	}
 
-	private void blockInMaintenanceMode(User user) {
-		if (application.getSettings().isMaintenance() && !user.isAdmin()) {
+	private void blockInMaintenanceMode(@Nullable User user) {
+		if (application.getSettings().isMaintenance() && user != null && !user.isAdmin()) {
 			throw new JsonHttpStatusException(HttpStatus.SERVICE_UNAVAILABLE,
 					"This functionality is currently under maintenance.");
 		}

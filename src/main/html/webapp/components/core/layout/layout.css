@@ -3,8 +3,8 @@ body {
 }
 
 footer {
-  padding-top: 3rem;
-  padding-bottom: 3rem;
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
 }
 
 footer p {
@@ -328,3 +328,4 @@ footer p {
 .ansi-bright-white-bg {
   background-color: #fff;
 }
+

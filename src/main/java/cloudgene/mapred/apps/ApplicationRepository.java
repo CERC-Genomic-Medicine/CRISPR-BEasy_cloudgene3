@@ -106,6 +106,7 @@ public class ApplicationRepository {
 
 		Application application = indexApps.get(id);
 		if (application != null) {
+			log.warn(id + " was found");
 			return application;
 		}
 
@@ -117,6 +118,7 @@ public class ApplicationRepository {
 			}
 		}
 		if (versions.isEmpty()) {
+			log.warn(id + " was Not found");
 			return null;
 		}
 
@@ -129,7 +131,7 @@ public class ApplicationRepository {
 				latest = versions.get(i);
 			}
 		}
-
+		log.warn(id + " was found ");
 		return latest;
 
 	}

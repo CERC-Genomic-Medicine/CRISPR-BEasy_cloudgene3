@@ -110,11 +110,22 @@ export default Control.extend({
   "#parameters submit": function (form, event) {
     event.preventDefault();
 
-    // check required parameters.
-    if (form.checkValidity() === false) {
-      form.classList.add("was-validated");
-      return false;
-    }
+  // Temporarily strip `required` from inputs inside collapsed sections
+  // so they don't block validation, but still get submitted.
+  var $hiddenRequired = $(form)
+    .find(".multi-collapse:not(.show)")
+    .find("[required]");
+  $hiddenRequired.removeAttr("required");
+
+  var isValid = form.checkValidity();
+
+  // Restore required immediately after checking
+  $hiddenRequired.attr("required", "");
+
+  if (!isValid) {
+    form.classList.add("was-validated");
+    return false;
+  }
 
     //show upload dialog
     var uploadDialog = bootbox.dialog({

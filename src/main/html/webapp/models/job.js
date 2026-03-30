@@ -218,6 +218,31 @@ export default Model.extend({
       get: function () {
         return this.attr('state') > '3' || this.attr('state') == '-1';
       }
+    },
+
+    'hasWebpageOutput': {
+      get: function () {
+        var params = this.attr('outputParams');
+        if (!params) return false;
+        for (var i = 0; i < params.attr('length'); i++) {
+		  if ((params.attr(i).attr('type') || '').trim().toLowerCase() === 'webpage') return true;
+        }
+        return false;
+      }
+    },
+
+    'webpageOutputParams': {
+      get: function () {
+        var params = this.attr('outputParams');
+        var result = [];
+        if (!params) return result;
+        for (var i = 0; i < params.attr('length'); i++) {
+          if ((params.attr(i).attr('type') || '').trim().toLowerCase() === 'webpage') {
+            result.push(params.attr(i));
+          }
+        }
+        return result;
+      }
     }
   }
 });

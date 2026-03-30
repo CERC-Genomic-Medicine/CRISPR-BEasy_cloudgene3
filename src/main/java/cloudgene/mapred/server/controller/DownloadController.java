@@ -1,6 +1,7 @@
 package cloudgene.mapred.server.controller;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
@@ -21,8 +22,11 @@ import cloudgene.mapred.server.auth.AuthenticationType;
 import cloudgene.mapred.server.exceptions.JsonHttpStatusException;
 import cloudgene.mapred.server.services.DownloadService;
 import cloudgene.mapred.server.services.JobService;
+import cloudgene.mapred.wdl.WdlParameterOutputType;
 import genepi.io.FileUtil;
+import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
@@ -30,6 +34,12 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.rules.SecurityRule;
 import jakarta.inject.Inject;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 @Controller
 public class DownloadController {
@@ -159,6 +169,95 @@ public class DownloadController {
 
 		return new File(resultFile);
 
+	}
+
+	@Get("/api/v2/jobs/{jobId}/webpage/{paramName}/{path:.+}")
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	public MutableHttpResponse<InputStream> serveWebpageFile(Authentication authentication, String jobId,
+			String paramName, String path) throws IOException {
+
+		User user = authenticationService.getUserByAuthentication(authentication, AuthenticationType.ALL_TOKENS);
+
+		AbstractJob job = jobService.getByIdAndUser(jobId, user);
+
+		// Find the output parameter by name and verify it is a webpage type
+		CloudgeneParameterOutput webpageParam = null;
+		for (CloudgeneParameterOutput param : job.getOutputParams()) {
+			if (param.getName().equals(paramName) && param.getType() == WdlParameterOutputType.WEBPAGE) {
+				webpageParam = param;
+				break;
+			}
+		}
+
+		if (webpageParam == null) {
+			throw new JsonHttpStatusException(HttpStatus.NOT_FOUND,
+					"Webpage output '" + paramName + "' not found for job " + jobId);
+		}
+
+		// Resolve the file path and prevent directory traversal
+		String outputFolder = FileUtil.path(application.getSettings().getLocalWorkspace(), job.getId(), paramName);
+		Path basePath = Paths.get(outputFolder).normalize();
+		Path filePath = basePath.resolve(path).normalize();
+
+		if (!filePath.startsWith(basePath)) {
+			throw new JsonHttpStatusException(HttpStatus.FORBIDDEN, "Access denied.");
+		}
+
+		File file = filePath.toFile();
+		if (!file.exists() || !file.isFile()) {
+			throw new JsonHttpStatusException(HttpStatus.NOT_FOUND, "File not found: " + path);
+		}
+
+		String contentType = getContentType(filePath);
+
+		log.info("Job: Serving webpage file '{}' for job {}", path, jobId);
+		return HttpResponse.<InputStream>ok(new FileInputStream(file))
+				.contentType(MediaType.of(contentType))
+				.contentLength(file.length());
+	}
+
+	private static final Map<String, String> MIME_TYPES = new HashMap<>();
+	static {
+		MIME_TYPES.put("html", "text/html");
+		MIME_TYPES.put("htm", "text/html");
+		MIME_TYPES.put("css", "text/css");
+		MIME_TYPES.put("js", "application/javascript");
+		MIME_TYPES.put("json", "application/json");
+		MIME_TYPES.put("png", "image/png");
+		MIME_TYPES.put("jpg", "image/jpeg");
+		MIME_TYPES.put("jpeg", "image/jpeg");
+		MIME_TYPES.put("gif", "image/gif");
+		MIME_TYPES.put("svg", "image/svg+xml");
+		MIME_TYPES.put("ico", "image/x-icon");
+		MIME_TYPES.put("woff", "font/woff");
+		MIME_TYPES.put("woff2", "font/woff2");
+		MIME_TYPES.put("ttf", "font/ttf");
+		MIME_TYPES.put("csv", "text/csv");
+		MIME_TYPES.put("tsv", "text/tab-separated-values");
+		MIME_TYPES.put("txt", "text/plain");
+		MIME_TYPES.put("xml", "application/xml");
+		MIME_TYPES.put("pdf", "application/pdf");
+	}
+
+	private String getContentType(Path filePath) {
+		String filename = filePath.getFileName().toString();
+		int dotIndex = filename.lastIndexOf('.');
+		if (dotIndex > 0) {
+			String ext = filename.substring(dotIndex + 1).toLowerCase();
+			String mime = MIME_TYPES.get(ext);
+			if (mime != null) {
+				return mime;
+			}
+		}
+		try {
+			String probed = Files.probeContentType(filePath);
+			if (probed != null) {
+				return probed;
+			}
+		} catch (IOException e) {
+			// fall through
+		}
+		return "application/octet-stream";
 	}
 
 }

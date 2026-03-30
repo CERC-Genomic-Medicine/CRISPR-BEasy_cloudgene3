@@ -13,6 +13,7 @@ import JobOperation from "models/job-operation";
 import ResultsControl from "./results/";
 import StepsControl from "./steps/";
 import LogsControl from "./logs/";
+import WebpageControl from "./webpage/";
 
 import template from "./detail.stache";
 
@@ -61,6 +62,11 @@ export default Control.extend({
             case "logs":
               console.log("Initializing LogsControl");
               new LogsControl("#tab-logs", { job: job });
+              break;
+
+            case "webpage":
+              console.log("Initializing WebpageControl");
+              new WebpageControl("#tab-webpage", { job: job });
               break;
 
             default:
